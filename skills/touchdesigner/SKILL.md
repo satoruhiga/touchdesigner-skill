@@ -9,6 +9,10 @@ allowed-tools: Bash(node:*)
 
 Use this skill to work directly in a running TouchDesigner project. The bundled TOX exposes a local HTTP bridge inside TouchDesigner; the bundled Node script calls that bridge without requiring MCP installation.
 
+## Mandatory First Step
+
+Immediately after loading this skill, read `references/basics.md` once per session before doing TouchDesigner work, including asking setup questions, running connectivity checks, or making project changes. If it has already been read in the current session, do not read it again; follow the remembered rules. Treat it as required operating procedure; do not run mutating `execute` calls until it has been read in the current session.
+
 ## Setup
 
 1. Ensure TouchDesigner 2025 or later is open.
@@ -25,17 +29,16 @@ If the command cannot connect, tell the user to load the TOX or align `TDAPI_POR
 
 ## Workflow
 
-1. Read `references/basics.md` before making network changes.
-2. Read only the relevant extra reference:
+1. Read only the relevant extra reference:
    - `references/operator-families.md` for SOP/POP/TOP/CHOP/DAT/COMP conversion.
    - `references/geometry-comp.md` for Geometry COMP and instancing.
    - `references/rendering.md` for Camera, Light, Render TOP, and output.
    - `references/glsl.md` for GLSL TOP, MAT, POP, and shader work.
    - `references/operator-tips.md` for feedback loops and simulations.
-3. Inspect the current TD state with `pane`, `selection`, or `operators`.
-4. Execute small Python changes through `scripts/client.mjs execute`.
-5. Verify parameter names with `op.TDAPI.GetParameterList()` before setting parameters.
-6. Check errors in a separate call after complex changes because TD error state updates on frame boundaries.
+2. Inspect the current TD state with `pane`, `selection`, or `operators`.
+3. Execute small Python changes through `scripts/client.mjs execute`.
+4. Verify parameter names with `op.TDAPI.GetParameterList()` before setting parameters.
+5. Check errors in a separate call after complex changes because TD error state updates on frame boundaries.
 
 ## Local Client
 
