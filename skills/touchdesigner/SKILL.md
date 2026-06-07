@@ -2,6 +2,7 @@
 name: touchdesigner
 description: Create, inspect, modify, and debug TouchDesigner networks through a local TouchDesigner HTTP bridge and bundled reference guidance. Use when the user asks to work with TouchDesigner, TD operators, SOP/POP/TOP/CHOP/DAT/COMP networks, GLSL in TD, rendering setup, operator parameters, network layout, or AI-assisted TD project changes.
 license: MIT
+allowed-tools: Bash(node:*)
 ---
 
 # TouchDesigner
@@ -11,9 +12,10 @@ Use this skill to work directly in a running TouchDesigner project. The bundled 
 ## Setup
 
 1. Ensure TouchDesigner 2025 or later is open.
-2. Load `assets/toe/TouchDesignerAPI.tox` into the project if `op.TDAPI` is not already present.
-3. Use `TDAPI_PORT` when the TOX Port parameter is not `44444`.
-4. Verify connectivity before changing the project:
+2. Ensure Node.js 18 or later is available for `scripts/client.mjs`.
+3. Load `assets/toe/TouchDesignerAPI.tox` into the project if `op.TDAPI` is not already present.
+4. Use `TDAPI_PORT` when the TOX Port parameter is not `44444`.
+5. Verify connectivity before changing the project:
 
 ```bash
 node scripts/client.mjs ping
@@ -91,5 +93,6 @@ Apply these rules:
 ## Bridge Assets
 
 - `assets/toe/TouchDesignerAPI.tox`: drop-in TouchDesigner component.
-- `assets/td-api/TouchDesignerAPI.py`: source for the TD HTTP extension.
-- `assets/td-api/td_utils.py`: helper functions bound to `op.TDAPI`.
+- `assets/toe/develop.toe`: development TouchDesigner project for the bridge.
+- `assets/toe/src/TouchDesignerAPI.py`: source for the TD HTTP extension.
+- `assets/toe/src/td_utils.py`: helper functions bound to `op.TDAPI`.
