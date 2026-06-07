@@ -12,7 +12,8 @@ Usage:
   node scripts/client.mjs selection [--host HOST] [--port PORT]
   node scripts/client.mjs operators [PATH] [--host HOST] [--port PORT]
   node scripts/client.mjs execute [--from OP_PATH] [--quiet]
-  node scripts/client.mjs params OP_TYPE
+  node scripts/client.mjs params TARGET [--match PATTERN] [--changed] [--full]
+  node scripts/client.mjs inspect OP_PATH
   node scripts/client.mjs info OP_TYPE
   node scripts/client.mjs errors [OP_PATH]
   node scripts/client.mjs kb path
@@ -110,6 +111,18 @@ async function requestJson(config, path, init = {}) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function buildQuery(params) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === false) {
+      continue;
+    }
+    query.set(key, String(value));
+  }
+  const text = query.toString();
+  return text ? `?${text}` : "";
 }
 
 async function readStdin() {
@@ -355,15 +368,26 @@ async function main() {
   }
 
   if (command === "params") {
-    const opType = positional[0];
-    if (!opType) {
-      throw new Error("params requires an operator type, e.g. sphereSOP.");
+    const target = positional[0];
+    if (!target) {
+      throw new Error("params requires an operator type or path, e.g. sphereSOP or /project1/geo1.");
     }
-    const code = [
-      "import json",
-      `print(json.dumps(op.TDAPI.GetParameterList(${pythonString(opType)}), ensure_ascii=False))`,
-    ].join("\n");
-    printJson(await executePython(config, code, "/"), compact);
+    const query = buildQuery({
+      target,
+      match: options.match,
+      changed: Boolean(options.changed),
+      full: Boolean(options.full),
+    });
+    printJson(await requestJson(config, `/params${query}`), compact);
+    return;
+  }
+
+  if (command === "inspect") {
+    const path = positional[0];
+    if (!path) {
+      throw new Error("inspect requires an operator path, e.g. /project1/geo1.");
+    }
+    printJson(await requestJson(config, `/inspect${buildQuery({ path })}`), compact);
     return;
   }
 

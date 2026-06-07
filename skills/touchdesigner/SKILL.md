@@ -35,9 +35,9 @@ If the command cannot connect, tell the user to load the TOX or align `TDAPI_POR
    - `references/rendering.md` for Camera, Light, Render TOP, and output.
    - `references/glsl.md` for GLSL TOP, MAT, POP, and shader work.
    - `references/operator-tips.md` for feedback loops and simulations.
-2. Inspect the current TD state with `pane`, `selection`, or `operators`.
+2. Inspect the current TD state with `pane`, `selection`, `operators`, `params`, or `inspect`.
 3. Execute small Python changes through `scripts/client.mjs execute`.
-4. Verify parameter names with `op.TDAPI.GetParameterList()` before setting parameters.
+4. Verify parameter names with `scripts/client.mjs params` before setting parameters.
 5. Check errors in a separate call after complex changes because TD error state updates on frame boundaries.
 
 ## Local Client
@@ -48,8 +48,19 @@ Use the client relative to the skill root:
 node scripts/client.mjs pane
 node scripts/client.mjs selection
 node scripts/client.mjs operators /project1
-node scripts/client.mjs params sphereSOP
+node scripts/client.mjs params sphereSOP --match "rad*"
+node scripts/client.mjs params /project1/base1/sphere1 --changed
+node scripts/client.mjs inspect /project1/base1/sphere1
 ```
+
+Use Runtime Inquiry commands before writing ad hoc Python:
+
+- `params OP_TYPE`: show parameter reference from TouchDesigner's offline help.
+- `params OP_PATH`: show live parameter state for an operator.
+- `params ... --match "t* r* ^help*"`: filter parameter names with wildcard patterns and `^` exclusions.
+- `params OP_PATH --changed`: show only changed, expression, export, or bind parameters.
+- `params TARGET --full`: include extra metadata such as menu names and ranges.
+- `inspect OP_PATH`: show compact live state for one operator, including changed parameters, connections, docked operators, and errors.
 
 Pipe Python through stdin to avoid shell quoting problems:
 

@@ -44,6 +44,8 @@ The bundled command talks to the local TouchDesigner bridge:
 node scripts/client.mjs ping
 node scripts/client.mjs pane
 node scripts/client.mjs operators /project1
+node scripts/client.mjs params glslTOP --match "vec* pixeldat"
+node scripts/client.mjs inspect /project1/test/glsl1
 ```
 
 `execute` reads Python from stdin and writes input diagnostics to stderr. Stdout remains the TouchDesigner JSON response.

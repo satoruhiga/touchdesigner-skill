@@ -5,6 +5,7 @@ These functions are designed to be imported and bound to TouchDesignerAPI class.
 
 from __future__ import annotations
 
+import fnmatch
 from typing import TYPE_CHECKING, Any, NamedTuple
 
 if TYPE_CHECKING:
@@ -40,6 +41,7 @@ __all__ = [
     'AABB',
     'MoveOp', 'CreateOp', 'CreateGeometryComp', 'ChainOperators',
     'GetOperatorInfo', 'GetParameterList', 'GetParameterHelp',
+    'GetParameters', 'InspectOperator',
     'PrintLayout', 'CheckErrors',
     # Layout utilities
     'GetBounds', 'CheckOverlap', 'GetAllBounds',
@@ -268,6 +270,224 @@ def GetParameterHelp(self, op_type: str, param_name: str) -> dict[str, Any] | No
     if info and 'parameters' in info:
         return info['parameters'].get(param_name)
     return None
+
+
+def _pattern_parts(patterns: str | None) -> tuple[list[str], list[str]]:
+    """Split TouchDesigner-style pattern text into include/exclude patterns."""
+    if not patterns:
+        return ['*'], []
+
+    parts = [part for part in patterns.replace(',', ' ').split() if part]
+    includes = [part for part in parts if not part.startswith('^')]
+    excludes = [part[1:] for part in parts if part.startswith('^') and len(part) > 1]
+    return includes or ['*'], excludes
+
+
+def _matches_patterns(name: str, patterns: str | None) -> bool:
+    """Return True when name matches include patterns and no exclude patterns."""
+    includes, excludes = _pattern_parts(patterns)
+    if not any(fnmatch.fnmatchcase(name, pattern) for pattern in includes):
+        return False
+    if any(fnmatch.fnmatchcase(name, pattern) for pattern in excludes):
+        return False
+    return True
+
+
+def _safe_value(value: Any) -> Any:
+    """Convert TD values to JSON-friendly values."""
+    if value is None:
+        return None
+    if isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, (list, tuple)):
+        return [_safe_value(item) for item in value]
+    if hasattr(value, 'path'):
+        return value.path
+    return str(value)
+
+
+def _safe_attr(target: Any, name: str) -> Any:
+    try:
+        return _safe_value(getattr(target, name))
+    except Exception:
+        return None
+
+
+def _page_name(par: Any) -> str | None:
+    try:
+        page = par.page
+        if page is None:
+            return None
+        return getattr(page, 'name', str(page))
+    except Exception:
+        return None
+
+
+def _mode_name(par: Any) -> str | None:
+    try:
+        mode = str(par.mode)
+        return mode.split('.')[-1]
+    except Exception:
+        return None
+
+
+def _export_info(par: Any) -> dict[str, Any] | None:
+    export_op = _safe_attr(par, 'exportOP')
+    export_source = _safe_attr(par, 'exportSource')
+    if export_op is None and export_source is None:
+        return None
+    return {'op': export_op, 'source': export_source}
+
+
+def _bind_info(par: Any) -> dict[str, Any] | None:
+    bind_expr = _safe_attr(par, 'bindExpr')
+    bind_master = _safe_attr(par, 'bindMaster')
+    if bind_expr is None and bind_master is None:
+        return None
+    return {'expr': bind_expr, 'master': bind_master}
+
+
+def _par_changed(par: Any) -> bool:
+    try:
+        if not par.isDefault:
+            return True
+    except Exception:
+        pass
+
+    mode = _mode_name(par)
+    if mode and mode != 'CONSTANT':
+        return True
+
+    return _export_info(par) is not None or _bind_info(par) is not None
+
+
+def _live_parameter_info(par: Any, full: bool = False) -> dict[str, Any]:
+    """Serialize a live TouchDesigner parameter."""
+    data = {
+        'name': _safe_attr(par, 'name'),
+        'label': _safe_attr(par, 'label'),
+        'page': _page_name(par),
+        'style': _safe_attr(par, 'style'),
+        'value': _safe_attr(par, 'val'),
+        'default': _safe_attr(par, 'default'),
+        'mode': _mode_name(par),
+        'expr': _safe_attr(par, 'expr'),
+        'export': _export_info(par),
+        'bind': _bind_info(par),
+        'help': _safe_attr(par, 'help'),
+    }
+
+    if full:
+        data.update({
+            'menuNames': _safe_attr(par, 'menuNames'),
+            'menuLabels': _safe_attr(par, 'menuLabels'),
+            'min': _safe_attr(par, 'min'),
+            'max': _safe_attr(par, 'max'),
+            'normMin': _safe_attr(par, 'normMin'),
+            'normMax': _safe_attr(par, 'normMax'),
+        })
+
+    return data
+
+
+def _type_parameter_info(name: str, info: dict[str, Any], full: bool = False) -> dict[str, Any]:
+    """Serialize an offlineHelp parameter entry."""
+    data = {
+        'name': name,
+        'label': info.get('label'),
+        'page': info.get('page'),
+        'style': info.get('parType') or info.get('style'),
+        'help': info.get('summary') or info.get('help'),
+    }
+
+    if full:
+        for key in (
+            'menuNames', 'menuLabels', 'min', 'max', 'normMin', 'normMax',
+            'default', 'defaultValue',
+        ):
+            if key in info:
+                data[key] = info.get(key)
+
+    return data
+
+
+def GetParameters(
+    self,
+    target: str,
+    match: str | None = None,
+    changed: bool = False,
+    full: bool = False,
+) -> dict[str, Any]:
+    """Get parameter details for an operator type or live operator path."""
+    if target.startswith('/'):
+        target_op = op(target)
+        if target_op is None:
+            raise ValueError(f"Invalid operator path: {target}")
+
+        parameters = []
+        for par in target_op.pars():
+            name = par.name
+            if not _matches_patterns(name, match):
+                continue
+            if changed and not _par_changed(par):
+                continue
+            parameters.append(_live_parameter_info(par, full=full))
+
+        return {
+            'kind': 'path',
+            'path': target_op.path,
+            'opType': target_op.OPType,
+            'parameters': parameters,
+        }
+
+    info = GetOperatorInfo(self, target)
+    param_info = info.get('parameters', {}) if info else {}
+    parameters = [
+        _type_parameter_info(name, data, full=full)
+        for name, data in param_info.items()
+        if _matches_patterns(name, match)
+    ]
+
+    return {
+        'kind': 'type',
+        'opType': target,
+        'parameters': parameters,
+    }
+
+
+def InspectOperator(self, target: OP | str) -> dict[str, Any]:
+    """Return a compact live-state summary for one operator."""
+    if isinstance(target, str):
+        target = op(target)
+    if target is None:
+        raise ValueError("Invalid operator path")
+
+    try:
+        target.cook(force=True)
+    except Exception:
+        pass
+
+    return {
+        'path': target.path,
+        'name': target.name,
+        'type': target.type,
+        'opType': target.OPType,
+        'family': target.family,
+        'parent': target.parent().path if target.parent() is not None else None,
+        'position': {'x': target.nodeX, 'y': target.nodeY},
+        'viewer': _safe_attr(target, 'viewer'),
+        'display': _safe_attr(target, 'display'),
+        'render': _safe_attr(target, 'render'),
+        'inputs': [input_op.path for input_op in target.inputs if input_op is not None],
+        'outputs': [output_op.path for output_op in target.outputs if output_op is not None],
+        'docked': [docked.path for docked in target.docked],
+        'changedParameters': [
+            _live_parameter_info(par, full=False)
+            for par in target.pars()
+            if _par_changed(par)
+        ],
+        'errors': target.errors(recurse=False),
+    }
 
 
 def PrintLayout(self, base: OP | None = None) -> None:

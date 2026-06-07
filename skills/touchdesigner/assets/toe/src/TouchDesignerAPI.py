@@ -55,10 +55,34 @@ class TouchDesignerAPI:
             path = unquote(pars.get("path", "/"))
             return self._handle_operators(path, response)
 
+        # GET /params - Parameter inquiry for operator type or path
+        if uri.startswith("/params") and method == "GET":
+            target = unquote(pars.get("target", ""))
+            match = unquote(pars.get("match", "*"))
+            changed = self._parse_bool(pars.get("changed", "false"))
+            full = self._parse_bool(pars.get("full", "false"))
+            return self._handle_params(target, match, changed, full, response)
+
+        # GET /inspect - Compact live operator state
+        if uri.startswith("/inspect") and method == "GET":
+            path = unquote(pars.get("path", ""))
+            return self._handle_inspect(path, response)
+
         # 404 for other endpoints
         response["statusCode"] = 404
         response["statusReason"] = "Not Found"
         response["data"] = json.dumps({"error": "Not Found"})
+        return self._send_response(response)
+
+    def _parse_bool(self, value) -> bool:
+        """Parse query string booleans."""
+        return str(value).lower() in ("1", "true", "yes", "on")
+
+    def _send_error(self, response: dict, status_code: int, message: str) -> dict:
+        """Send JSON error response."""
+        response["statusCode"] = status_code
+        response["statusReason"] = "Error"
+        response["data"] = json.dumps({"error": message}, ensure_ascii=False)
         return self._send_response(response)
 
     # -------------------------------------------------------------------------
@@ -225,6 +249,60 @@ class TouchDesignerAPI:
             response["statusReason"] = "Internal Server Error"
             response["data"] = json.dumps({"error": str(e)})
 
+        return self._send_response(response)
+
+    # -------------------------------------------------------------------------
+    # GET /params
+    # -------------------------------------------------------------------------
+
+    def _handle_params(
+        self,
+        target: str,
+        match: str,
+        changed: bool,
+        full: bool,
+        response: dict,
+    ) -> dict:
+        """Handle GET /params request."""
+        if not target:
+            return self._send_error(response, 400, "target is required")
+
+        try:
+            result = self.GetParameters(
+                target,
+                match=match,
+                changed=changed,
+                full=full,
+            )
+        except ValueError as e:
+            return self._send_error(response, 404, str(e))
+        except Exception as e:
+            return self._send_error(response, 500, str(e))
+
+        response["statusCode"] = 200
+        response["statusReason"] = "OK"
+        response["data"] = json.dumps(result, ensure_ascii=False)
+        return self._send_response(response)
+
+    # -------------------------------------------------------------------------
+    # GET /inspect
+    # -------------------------------------------------------------------------
+
+    def _handle_inspect(self, path: str, response: dict) -> dict:
+        """Handle GET /inspect request."""
+        if not path:
+            return self._send_error(response, 400, "path is required")
+
+        try:
+            result = self.InspectOperator(path)
+        except ValueError as e:
+            return self._send_error(response, 404, str(e))
+        except Exception as e:
+            return self._send_error(response, 500, str(e))
+
+        response["statusCode"] = 200
+        response["statusReason"] = "OK"
+        response["data"] = json.dumps(result, ensure_ascii=False)
         return self._send_response(response)
 
     # -------------------------------------------------------------------------
