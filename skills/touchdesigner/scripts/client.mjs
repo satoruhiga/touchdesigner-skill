@@ -7,19 +7,23 @@ const DEFAULT_TIMEOUT_MS = 10000;
 const USAGE = `TouchDesigner local HTTP client
 
 Usage:
-  node scripts/td-client.mjs ping [--host HOST] [--port PORT]
-  node scripts/td-client.mjs pane [--host HOST] [--port PORT]
-  node scripts/td-client.mjs selection [--host HOST] [--port PORT]
-  node scripts/td-client.mjs operators [PATH] [--host HOST] [--port PORT]
-  node scripts/td-client.mjs execute [--from OP_PATH] [--code CODE | --file FILE]
-  node scripts/td-client.mjs params OP_TYPE
-  node scripts/td-client.mjs info OP_TYPE
-  node scripts/td-client.mjs errors [OP_PATH]
+  node scripts/client.mjs ping [--host HOST] [--port PORT]
+  node scripts/client.mjs pane [--host HOST] [--port PORT]
+  node scripts/client.mjs selection [--host HOST] [--port PORT]
+  node scripts/client.mjs operators [PATH] [--host HOST] [--port PORT]
+  node scripts/client.mjs execute [--from OP_PATH] [--quiet]
+  node scripts/client.mjs params OP_TYPE
+  node scripts/client.mjs info OP_TYPE
+  node scripts/client.mjs errors [OP_PATH]
 
 Environment:
   TDAPI_HOST        default: localhost
   TDAPI_PORT        default: 44444
   TDAPI_TIMEOUT_MS  default: 10000
+
+Notes:
+  execute reads Python from stdin. It writes input diagnostics to stderr by default.
+  Use --quiet to suppress diagnostics.
 `;
 
 function parseArgs(argv) {
@@ -95,6 +99,9 @@ async function requestJson(config, path, init = {}) {
     if (error.name === "AbortError") {
       throw new Error(`Timed out after ${config.timeoutMs}ms connecting to ${config.baseUrl}`);
     }
+    if (error instanceof TypeError) {
+      throw new Error(`Failed to connect to ${config.baseUrl}: ${error.message}`);
+    }
     throw error;
   } finally {
     clearTimeout(timeout);
@@ -111,19 +118,21 @@ async function readStdin() {
 
 async function readCode(options) {
   if (options.code !== undefined) {
-    return String(options.code);
+    throw new Error("--code was removed. Pipe Python code through stdin instead.");
   }
-
   if (options.file !== undefined) {
-    const { readFile } = await import("node:fs/promises");
-    return readFile(String(options.file), "utf8");
+    throw new Error("--file was removed. Pipe Python code through stdin instead.");
   }
 
   if (process.stdin.isTTY) {
-    throw new Error("Provide Python code with --code, --file, or stdin.");
+    throw new Error("Provide Python code on stdin.");
   }
 
-  return readStdin();
+  const code = await readStdin();
+  if (code.length === 0) {
+    throw new Error("No Python code received on stdin.");
+  }
+  return code;
 }
 
 function printJson(value, compact) {
@@ -132,6 +141,36 @@ function printJson(value, compact) {
 
 function pythonString(value) {
   return JSON.stringify(String(value));
+}
+
+async function sha256(text) {
+  const { createHash } = await import("node:crypto");
+  return createHash("sha256").update(text, "utf8").digest("hex");
+}
+
+function lineCount(text) {
+  if (text.length === 0) {
+    return 0;
+  }
+  const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const withoutFinalNewline = normalized.endsWith("\n")
+    ? normalized.slice(0, -1)
+    : normalized;
+  return withoutFinalNewline.length === 0 ? 1 : withoutFinalNewline.split("\n").length;
+}
+
+async function writeInputDiagnostics(code, fromOp, quiet) {
+  if (quiet) {
+    return;
+  }
+
+  const bytes = Buffer.byteLength(code, "utf8");
+  const chars = Array.from(code).length;
+  const lines = lineCount(code);
+  const hash = await sha256(code);
+  process.stderr.write(
+    `touchdesigner input: source=stdin from=${fromOp} bytes=${bytes} chars=${chars} lines=${lines} sha256=${hash}\n`
+  );
 }
 
 async function executePython(config, code, fromOp) {
@@ -182,6 +221,7 @@ async function main() {
   if (command === "execute") {
     const code = await readCode(options);
     const fromOp = String(options.from ?? options["from-op"] ?? "/");
+    await writeInputDiagnostics(code, fromOp, Boolean(options.quiet));
     printJson(await executePython(config, code, fromOp), compact);
     return;
   }

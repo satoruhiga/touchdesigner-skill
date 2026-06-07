@@ -37,20 +37,22 @@ gh skill preview satoruhiga/touchdesigner-skill touchdesigner
 Use $touchdesigner to create a Grid SOP with animated noise and check errors.
 ```
 
-The bundled client talks to the local TouchDesigner bridge:
+The bundled command talks to the local TouchDesigner bridge:
 
 ```bash
-node scripts/td-client.mjs ping
-node scripts/td-client.mjs pane
-node scripts/td-client.mjs operators /project1
+node scripts/client.mjs ping
+node scripts/client.mjs pane
+node scripts/client.mjs operators /project1
 ```
+
+`execute` reads Python from stdin and writes input diagnostics to stderr. Stdout remains the TouchDesigner JSON response.
 
 Set `TDAPI_PORT` when the TOX Port parameter is not `44444`.
 
 ## Structure
 
 - `skills/touchdesigner/SKILL.md`: portable skill entry point.
-- `skills/touchdesigner/scripts/td-client.mjs`: dependency-free local HTTP client.
+- `skills/touchdesigner/scripts/client.mjs`: dependency-free local HTTP command.
 - `skills/touchdesigner/references/`: task-specific TouchDesigner guidance.
 - `skills/touchdesigner/assets/toe/`: TouchDesigner bridge component.
 - `skills/touchdesigner/assets/td-api/`: bridge source files.

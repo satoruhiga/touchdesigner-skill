@@ -16,7 +16,7 @@ Use this skill to work directly in a running TouchDesigner project. The bundled 
 4. Verify connectivity before changing the project:
 
 ```bash
-node scripts/td-client.mjs ping
+node scripts/client.mjs ping
 ```
 
 If the command cannot connect, tell the user to load the TOX or align `TDAPI_PORT` with the TOX Port parameter before continuing.
@@ -31,7 +31,7 @@ If the command cannot connect, tell the user to load the TOX or align `TDAPI_POR
    - `references/glsl.md` for GLSL TOP, MAT, POP, and shader work.
    - `references/operator-tips.md` for feedback loops and simulations.
 3. Inspect the current TD state with `pane`, `selection`, or `operators`.
-4. Execute small Python changes through `scripts/td-client.mjs execute`.
+4. Execute small Python changes through `scripts/client.mjs execute`.
 5. Verify parameter names with `op.TDAPI.GetParameterList()` before setting parameters.
 6. Check errors in a separate call after complex changes because TD error state updates on frame boundaries.
 
@@ -40,16 +40,16 @@ If the command cannot connect, tell the user to load the TOX or align `TDAPI_POR
 Use the client relative to the skill root:
 
 ```bash
-node scripts/td-client.mjs pane
-node scripts/td-client.mjs selection
-node scripts/td-client.mjs operators /project1
-node scripts/td-client.mjs params sphereSOP
+node scripts/client.mjs pane
+node scripts/client.mjs selection
+node scripts/client.mjs operators /project1
+node scripts/client.mjs params sphereSOP
 ```
 
 Pipe Python through stdin to avoid shell quoting problems:
 
 ```bash
-node scripts/td-client.mjs execute --from /project1/base1 <<'PY'
+node scripts/client.mjs execute --from /project1/base1 <<'PY'
 base = me
 grid = op.TDAPI.CreateOp(base, gridSOP, 'grid1', x=0, y=0)
 noise = op.TDAPI.CreateOp(base, noiseSOP, 'noise1', x=200, y=0)
@@ -63,8 +63,10 @@ For PowerShell:
 ```powershell
 @'
 print(me.path)
-'@ | node scripts/td-client.mjs execute --from /
+'@ | node scripts/client.mjs execute --from /
 ```
+
+`execute` writes input diagnostics to stderr by default (`bytes`, `chars`, `lines`, `sha256`, and `from`). Stdout remains the TouchDesigner JSON response. Use `--quiet` only when stderr must be silent.
 
 ## Required TD Patterns
 
