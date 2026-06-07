@@ -35,7 +35,7 @@ If the command cannot connect, tell the user to load the TOX or align `TDAPI_POR
    - `references/rendering.md` for Camera, Light, Render TOP, and output.
    - `references/glsl.md` for GLSL TOP, MAT, POP, and shader work.
    - `references/operator-tips.md` for feedback loops and simulations.
-2. Inspect the current TD state with `pane`, `selection`, `operators`, `params`, or `inspect`.
+2. Inspect the current TD state with `pane`, `selection`, `operators`, `params`, `inspect`, or `network`.
 3. Execute small Python changes through `scripts/client.mjs execute`.
 4. Verify parameter names with `scripts/client.mjs params` before setting parameters.
 5. Check errors in a separate call after complex changes because TD error state updates on frame boundaries.
@@ -51,6 +51,7 @@ node scripts/client.mjs operators /project1
 node scripts/client.mjs params sphereSOP --match "rad*"
 node scripts/client.mjs params /project1/base1/sphere1 --changed
 node scripts/client.mjs inspect /project1/base1/sphere1
+node scripts/client.mjs network /project1 --depth 1
 ```
 
 Use Runtime Inquiry commands before writing ad hoc Python:
@@ -61,6 +62,7 @@ Use Runtime Inquiry commands before writing ad hoc Python:
 - `params OP_PATH --changed`: show only changed, expression, export, or bind parameters.
 - `params TARGET --full`: include extra metadata such as menu names and ranges.
 - `inspect OP_PATH`: show compact live state for one operator, including changed parameters, connections, docked operators, and errors.
+- `network OP_PATH --depth N`: show a scoped directed graph with flat `nodes` and `edges`; node `id`/`path` and edge endpoints are absolute paths, while node `pathFromRoot` is the relative path to prefer when authoring local TD scripts from that root.
 
 Pipe Python through stdin to avoid shell quoting problems:
 
@@ -101,7 +103,7 @@ Apply these rules:
 - Use Null operators as stable reference endpoints.
 - Verify parameter names before assignment.
 - Lay out operators intentionally and avoid overlap.
-- Use relative paths for nearby operator references.
+- Use relative paths for nearby operator references. Runtime Inquiry may return absolute paths as stable identifiers; when authoring TouchDesigner scripts, prefer relative paths from an explicit local anchor such as `root`, `parent()`, or `me.parent()`.
 - Create source geometry at the parent level before feeding Geometry COMP.
 
 ## Personal Knowledge Base

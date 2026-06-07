@@ -68,6 +68,15 @@ class TouchDesignerAPI:
             path = unquote(pars.get("path", ""))
             return self._handle_inspect(path, response)
 
+        # GET /network - Directed graph for a scoped network
+        if uri.startswith("/network") and method == "GET":
+            path = unquote(pars.get("path", "/"))
+            try:
+                depth = int(pars.get("depth", "1"))
+            except Exception:
+                return self._send_error(response, 400, "depth must be an integer")
+            return self._handle_network(path, depth, response)
+
         # 404 for other endpoints
         response["statusCode"] = 404
         response["statusReason"] = "Not Found"
@@ -295,6 +304,29 @@ class TouchDesignerAPI:
 
         try:
             result = self.InspectOperator(path)
+        except ValueError as e:
+            return self._send_error(response, 404, str(e))
+        except Exception as e:
+            return self._send_error(response, 500, str(e))
+
+        response["statusCode"] = 200
+        response["statusReason"] = "OK"
+        response["data"] = json.dumps(result, ensure_ascii=False)
+        return self._send_response(response)
+
+    # -------------------------------------------------------------------------
+    # GET /network
+    # -------------------------------------------------------------------------
+
+    def _handle_network(self, path: str, depth: int, response: dict) -> dict:
+        """Handle GET /network request."""
+        if not path:
+            return self._send_error(response, 400, "path is required")
+        if depth < 0:
+            return self._send_error(response, 400, "depth must be non-negative")
+
+        try:
+            result = self.GetNetworkGraph(path, depth=depth)
         except ValueError as e:
             return self._send_error(response, 404, str(e))
         except Exception as e:

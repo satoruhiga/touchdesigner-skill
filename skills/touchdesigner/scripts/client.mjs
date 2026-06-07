@@ -14,6 +14,7 @@ Usage:
   node scripts/client.mjs execute [--from OP_PATH] [--quiet]
   node scripts/client.mjs params TARGET [--match PATTERN] [--changed] [--full]
   node scripts/client.mjs inspect OP_PATH
+  node scripts/client.mjs network [PATH] [--depth N]
   node scripts/client.mjs info OP_TYPE
   node scripts/client.mjs errors [OP_PATH]
   node scripts/client.mjs kb path
@@ -123,6 +124,17 @@ function buildQuery(params) {
   }
   const text = query.toString();
   return text ? `?${text}` : "";
+}
+
+function parseNonNegativeInteger(value, label) {
+  if (value === true || value === "" || value === undefined || value === null) {
+    throw new Error(`${label} requires a value.`);
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`${label} must be a non-negative integer.`);
+  }
+  return parsed;
 }
 
 async function readStdin() {
@@ -388,6 +400,13 @@ async function main() {
       throw new Error("inspect requires an operator path, e.g. /project1/geo1.");
     }
     printJson(await requestJson(config, `/inspect${buildQuery({ path })}`), compact);
+    return;
+  }
+
+  if (command === "network") {
+    const path = String(options.path ?? positional[0] ?? "/");
+    const depth = parseNonNegativeInteger(options.depth ?? 1, "depth");
+    printJson(await requestJson(config, `/network${buildQuery({ path, depth })}`), compact);
     return;
   }
 

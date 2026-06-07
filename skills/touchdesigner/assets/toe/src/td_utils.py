@@ -41,7 +41,7 @@ __all__ = [
     'AABB',
     'MoveOp', 'CreateOp', 'CreateGeometryComp', 'ChainOperators',
     'GetOperatorInfo', 'GetParameterList', 'GetParameterHelp',
-    'GetParameters', 'InspectOperator',
+    'GetParameters', 'InspectOperator', 'GetNetworkGraph',
     'PrintLayout', 'CheckErrors',
     # Layout utilities
     'GetBounds', 'CheckOverlap', 'GetAllBounds',
@@ -487,6 +487,236 @@ def InspectOperator(self, target: OP | str) -> dict[str, Any]:
             if _par_changed(par)
         ],
         'errors': target.errors(recurse=False),
+    }
+
+
+def _path_from_root(path: str, root_path: str) -> str | None:
+    """Return a path relative to root_path when path is inside root_path."""
+    if path == root_path:
+        return ''
+
+    prefix = root_path.rstrip('/') + '/'
+    if root_path == '/':
+        prefix = '/'
+
+    if path.startswith(prefix):
+        return path[len(prefix):]
+    return None
+
+
+def _node_graph_info(target: OP, root_path: str, depth: int) -> dict[str, Any]:
+    """Serialize a node for the network graph."""
+    parent_op = target.parent()
+    parent_path = parent_op.path if parent_op is not None else None
+
+    return {
+        'id': target.path,
+        'path': target.path,
+        'pathFromRoot': _path_from_root(target.path, root_path),
+        'name': target.name,
+        'type': target.type,
+        'opType': target.OPType,
+        'family': target.family,
+        'parent': parent_path,
+        'depth': depth,
+        'position': {'x': target.nodeX, 'y': target.nodeY},
+        'viewer': _safe_attr(target, 'viewer'),
+        'display': _safe_attr(target, 'display'),
+        'render': _safe_attr(target, 'render'),
+        'docked': [docked.path for docked in target.docked],
+    }
+
+
+def _walk_network_nodes(root: OP, max_depth: int) -> list[tuple[OP, int]]:
+    """Walk descendants of root up to max_depth. Direct children are depth 1."""
+    nodes = []
+
+    def visit(parent: OP, depth: int) -> None:
+        if depth > max_depth:
+            return
+        for child in parent.children:
+            nodes.append((child, depth))
+            if depth < max_depth:
+                visit(child, depth + 1)
+
+    if max_depth > 0:
+        visit(root, 1)
+    return nodes
+
+
+def _add_graph_edge(
+    edges: list[dict[str, Any]],
+    seen: set[tuple[Any, ...]],
+    edge: dict[str, Any],
+    included_paths: set[str],
+) -> None:
+    """Append a graph edge once, annotating whether endpoints are in scope."""
+    source = edge.get('from')
+    target = edge.get('to')
+    if not source or not target:
+        return
+
+    key = (
+        edge.get('kind'),
+        source,
+        target,
+        edge.get('toIndex'),
+        edge.get('toParameter'),
+        edge.get('source'),
+    )
+    if key in seen:
+        return
+
+    seen.add(key)
+    edge['fromInScope'] = source in included_paths
+    edge['toInScope'] = target in included_paths
+    edges.append(edge)
+
+
+def _input_index(source: OP, target: OP) -> int | None:
+    """Find the input connector index where source feeds target."""
+    try:
+        for index, input_op in enumerate(target.inputs):
+            if input_op is not None and input_op.path == source.path:
+                return index
+    except Exception:
+        pass
+    return None
+
+
+def _owner_path(value: Any) -> str | None:
+    """Return an owning operator path for Par-like objects when available."""
+    if value is None:
+        return None
+
+    for attr in ('owner', 'ownerComp'):
+        try:
+            owner = getattr(value, attr)
+            if owner is not None and hasattr(owner, 'path'):
+                return owner.path
+        except Exception:
+            pass
+
+    try:
+        if hasattr(value, 'path'):
+            return value.path
+    except Exception:
+        pass
+
+    return None
+
+
+def _add_parameter_edges(
+    edges: list[dict[str, Any]],
+    seen: set[tuple[Any, ...]],
+    target: OP,
+    included_paths: set[str],
+) -> None:
+    """Add export and bind parameter connections for one operator."""
+    for par in target.pars():
+        export = _export_info(par)
+        if export is not None and export.get('op'):
+            _add_graph_edge(
+                edges,
+                seen,
+                {
+                    'from': export.get('op'),
+                    'to': target.path,
+                    'kind': 'export',
+                    'toParameter': par.name,
+                    'source': export.get('source'),
+                },
+                included_paths,
+            )
+
+        try:
+            bind_master = par.bindMaster
+        except Exception:
+            bind_master = None
+        bind_source = _owner_path(bind_master)
+        if bind_source:
+            _add_graph_edge(
+                edges,
+                seen,
+                {
+                    'from': bind_source,
+                    'to': target.path,
+                    'kind': 'bind',
+                    'toParameter': par.name,
+                    'source': _safe_value(bind_master),
+                },
+                included_paths,
+            )
+
+
+def GetNetworkGraph(
+    self,
+    target: OP | str,
+    depth: int = 1,
+) -> dict[str, Any]:
+    """Return a directed graph for a scoped TouchDesigner network.
+
+    Nodes use absolute paths as stable IDs and include pathFromRoot for
+    authoring relative TD scripts from a local root.
+    """
+    if depth < 0:
+        raise ValueError("depth must be non-negative")
+
+    if isinstance(target, str):
+        target = op(target)
+    if target is None:
+        raise ValueError("Invalid operator path")
+
+    root_path = target.path
+    node_pairs = _walk_network_nodes(target, depth)
+    nodes = [
+        _node_graph_info(child, root_path, node_depth)
+        for child, node_depth in node_pairs
+    ]
+    included_ops = [child for child, _node_depth in node_pairs]
+    included_paths = {child.path for child in included_ops}
+
+    edges = []
+    seen_edges: set[tuple[Any, ...]] = set()
+
+    for child in included_ops:
+        for index, input_op in enumerate(child.inputs):
+            if input_op is None:
+                continue
+            _add_graph_edge(
+                edges,
+                seen_edges,
+                {
+                    'from': input_op.path,
+                    'to': child.path,
+                    'kind': 'input',
+                    'toIndex': index,
+                },
+                included_paths,
+            )
+
+        for output_op in child.outputs:
+            if output_op is None:
+                continue
+            _add_graph_edge(
+                edges,
+                seen_edges,
+                {
+                    'from': child.path,
+                    'to': output_op.path,
+                    'kind': 'input',
+                    'toIndex': _input_index(child, output_op),
+                },
+                included_paths,
+            )
+
+        _add_parameter_edges(edges, seen_edges, child, included_paths)
+
+    return {
+        'root': root_path,
+        'depth': depth,
+        'nodes': nodes,
+        'edges': edges,
     }
 
 
