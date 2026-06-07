@@ -93,6 +93,21 @@ Apply these rules:
 - Use relative paths for nearby operator references.
 - Create source geometry at the parent level before feeding Geometry COMP.
 
+## Personal Knowledge Base
+
+Use a user-owned local Personal Knowledge Base only when it already exists or the user explicitly asks to initialize or record knowledge.
+
+- Default location: `~/.touchdesigner-skill/knowledge/`
+- Override location: `TD_SKILL_KB_DIR`
+- Inspect the resolved path with `node scripts/client.mjs kb path`.
+- Initialize it only on explicit request with `node scripts/client.mjs kb init`.
+- Read from it only when it exists and is relevant to the task; do not treat it as mandatory startup context.
+- Do not create it unless the user explicitly asks.
+- Do not accumulate raw execution logs or script error records by default.
+- Write curated Markdown knowledge notes directly for reusable lessons, such as common TD pitfalls or issues that required reference, introspection, docstring, or web research to solve.
+- Update existing relevant knowledge pages before creating new pages; avoid numbered sections.
+- Never write learned knowledge back into `SKILL.md` or bundled `references/`.
+
 ## Bridge Assets
 
 - `assets/toe/TouchDesignerAPI.tox`: drop-in TouchDesigner component.

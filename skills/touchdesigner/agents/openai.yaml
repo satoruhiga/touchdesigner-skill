@@ -1,4 +1,4 @@
 interface:
   display_name: "TouchDesigner"
   short_description: "Build TouchDesigner networks with agent guidance"
-  default_prompt: "Use $touchdesigner to create or inspect a TouchDesigner network."
+  default_prompt: "Use the TouchDesigner skill to create or inspect a TouchDesigner network."

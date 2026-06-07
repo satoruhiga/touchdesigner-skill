@@ -15,15 +15,19 @@ Usage:
   node scripts/client.mjs params OP_TYPE
   node scripts/client.mjs info OP_TYPE
   node scripts/client.mjs errors [OP_PATH]
+  node scripts/client.mjs kb path
+  node scripts/client.mjs kb init
 
 Environment:
   TDAPI_HOST        default: localhost
   TDAPI_PORT        default: 44444
   TDAPI_TIMEOUT_MS  default: 10000
+  TD_SKILL_KB_DIR   default: ~/.touchdesigner-skill/knowledge
 
 Notes:
   execute reads Python from stdin. It writes input diagnostics to stderr by default.
   Use --quiet to suppress diagnostics.
+  kb commands do not connect to TouchDesigner.
 `;
 
 function parseArgs(argv) {
@@ -139,6 +143,124 @@ function printJson(value, compact) {
   process.stdout.write(`${JSON.stringify(value, null, compact ? 0 : 2)}\n`);
 }
 
+function expandHome(pathValue) {
+  if (pathValue === "~") {
+    return process.env.HOME ?? process.env.USERPROFILE ?? pathValue;
+  }
+  if (pathValue.startsWith("~/") || pathValue.startsWith("~\\")) {
+    const home = process.env.HOME ?? process.env.USERPROFILE;
+    return home ? `${home}${pathValue.slice(1)}` : pathValue;
+  }
+  return pathValue;
+}
+
+async function getKnowledgeBaseDir() {
+  const { join, resolve } = await import("node:path");
+  const configured = process.env.TD_SKILL_KB_DIR;
+
+  if (configured && configured.trim().length > 0) {
+    return resolve(expandHome(configured));
+  }
+
+  const home = process.env.HOME ?? process.env.USERPROFILE;
+  if (!home) {
+    throw new Error("Cannot resolve default knowledge base path because HOME/USERPROFILE is unset. Set TD_SKILL_KB_DIR.");
+  }
+
+  return join(home, ".touchdesigner-skill", "knowledge");
+}
+
+async function writeFileIfMissing(pathValue, content) {
+  const { writeFile } = await import("node:fs/promises");
+  try {
+    await writeFile(pathValue, content, { encoding: "utf8", flag: "wx" });
+    return true;
+  } catch (error) {
+    if (error.code === "EEXIST") {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function ensureDir(pathValue) {
+  const { mkdir } = await import("node:fs/promises");
+  const createdPath = await mkdir(pathValue, { recursive: true });
+  return createdPath !== undefined;
+}
+
+async function initKnowledgeBase(options) {
+  const { join } = await import("node:path");
+  const kbDir = await getKnowledgeBaseDir();
+
+  const operatorsCreated = await ensureDir(join(kbDir, "pages", "operators"));
+  const patternsCreated = await ensureDir(join(kbDir, "pages", "patterns"));
+  const preferencesCreated = await ensureDir(join(kbDir, "pages", "preferences"));
+
+  const indexCreated = await writeFileIfMissing(
+    join(kbDir, "index.md"),
+    `# TouchDesigner Personal Knowledge Base
+
+User-owned local knowledge for reusable TouchDesigner lessons, preferences, and workflow notes.
+
+## Pages
+
+- [Operators](pages/operators/)
+- [Patterns](pages/patterns/)
+- [Preferences](pages/preferences/)
+
+## Editing Rules
+
+- Update existing relevant pages before creating new pages.
+- Create pages only when a reusable lesson needs a stable home.
+- Avoid numbered sections.
+- Do not store raw execution logs or full inline Python scripts by default.
+`
+  );
+
+  printJson(
+    {
+      success: true,
+      path: kbDir,
+      created: {
+        "index.md": indexCreated,
+        "pages/operators": operatorsCreated,
+        "pages/patterns": patternsCreated,
+        "pages/preferences": preferencesCreated,
+      },
+      note: "Existing files were not overwritten.",
+    },
+    Boolean(options.compact)
+  );
+}
+
+async function handleKnowledgeBaseCommand(subcommand, options) {
+  if (subcommand === "path") {
+    printJson({ path: await getKnowledgeBaseDir() }, Boolean(options.compact));
+    return true;
+  }
+
+  if (subcommand === "init") {
+    await initKnowledgeBase(options);
+    return true;
+  }
+
+  if (subcommand === "help" || subcommand === "--help" || subcommand === "-h") {
+    process.stdout.write(`TouchDesigner Personal Knowledge Base
+
+Usage:
+  node scripts/client.mjs kb path
+  node scripts/client.mjs kb init
+
+Environment:
+  TD_SKILL_KB_DIR   default: ~/.touchdesigner-skill/knowledge
+`);
+    return true;
+  }
+
+  throw new Error(`Unknown kb command: ${subcommand ?? ""}\n\n${USAGE}`);
+}
+
 function pythonString(value) {
   return JSON.stringify(String(value));
 }
@@ -188,13 +310,19 @@ async function main() {
   const [commandRaw, ...rest] = process.argv.slice(2);
   const command = commandRaw ?? "help";
   const { options, positional } = parseArgs(rest);
-  const config = getConfig(options);
   const compact = Boolean(options.compact);
 
   if (command === "help" || command === "--help" || command === "-h") {
     process.stdout.write(USAGE);
     return;
   }
+
+  if (command === "kb") {
+    await handleKnowledgeBaseCommand(positional[0] ?? "help", options);
+    return;
+  }
+
+  const config = getConfig(options);
 
   if (command === "ping") {
     await requestJson(config, "/editor/pane");

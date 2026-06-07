@@ -50,6 +50,10 @@ node scripts/client.mjs operators /project1
 
 Set `TDAPI_PORT` when the TOX Port parameter is not `44444`.
 
+## Testing Feature
+
+The skill can maintain an optional personal TouchDesigner knowledge base for reusable lessons and preferences. It is local user-owned state, separate from the installed skill, and agents should initialize or write it only when explicitly asked.
+
 ## Structure
 
 - `skills/touchdesigner/SKILL.md`: portable skill entry point.
