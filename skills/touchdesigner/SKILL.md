@@ -117,7 +117,10 @@ Use a user-owned local Personal Knowledge Base only when it already exists or th
 - Read from it only when it exists and is relevant to the task; do not treat it as mandatory startup context.
 - Do not create it unless the user explicitly asks.
 - Do not accumulate raw execution logs or script error records by default.
-- Write curated Markdown knowledge notes directly for reusable lessons, such as common TD pitfalls or issues that required reference, introspection, docstring, or web research to solve.
+- Store only knowledge that can be reused across TouchDesigner projects. Do not store project-specific facts, project paths, client names, secrets, or one-off network details.
+- If project-specific work reveals a reusable pattern, abstract it into a general lesson before saving.
+- When a task reveals a reusable lesson worth keeping, suggest recording a Knowledge Note and ask before writing unless the user explicitly asked to record it.
+- When writing, use curated Markdown knowledge notes for reusable lessons, such as common TD pitfalls or issues that required reference, introspection, docstring, or web research to solve.
 - Update existing relevant knowledge pages before creating new pages; avoid numbered sections.
 - Never write learned knowledge back into `SKILL.md` or bundled `references/`.
 

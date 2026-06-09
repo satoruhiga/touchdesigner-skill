@@ -238,6 +238,10 @@ User-owned local knowledge for reusable TouchDesigner lessons, preferences, and 
 
 - Update existing relevant pages before creating new pages.
 - Create pages only when a reusable lesson needs a stable home.
+- Store only knowledge that can be reused across TouchDesigner projects.
+- Do not store project-specific facts, project paths, client names, secrets, or one-off network details.
+- Abstract project-specific context into a general lesson before saving.
+- When a reusable lesson appears during work, suggest a Knowledge Note and ask before writing unless the user explicitly requested it.
 - Avoid numbered sections.
 - Do not store raw execution logs or full inline Python scripts by default.
 `
