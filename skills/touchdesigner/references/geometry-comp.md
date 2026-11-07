@@ -4,15 +4,15 @@
 
 1. [Geometry COMP Pattern](#geometry-comp-pattern-sop-and-pop)
 2. [Setup Pattern](#setup-pattern-full-example)
-3. [DO NOT: Common Mistakes](#do-not-common-mistakes-to-avoid)
-4. [Correct Pattern](#correct-pattern)
+3. [Design Conditions](#design-conditions)
+4. [Default New-Network Pattern](#default-new-network-pattern)
 5. [Instancing](#instancing)
 
 ---
 
 ## Geometry COMP Pattern (SOP and POP)
 
-Use `CreateGeometryComp` - it handles default torus removal and In/Out setup automatically:
+For a new Geometry COMP using external source geometry, use `CreateGeometryComp`; it handles default torus removal and In/Out setup automatically. When copying or editing an existing sample, preserve its structure and behavior unless restructuring is requested:
 
 ```python
 # SOP version - auto-detects family from input_op
@@ -41,50 +41,19 @@ geo, in_sop, out_sop = op.TDAPI.CreateGeometryComp(base, 'geo1', input_op=some_s
 
 ---
 
-## DO NOT: Common Mistakes to Avoid
+## Design Conditions
 
-**These patterns cause debugging nightmares. NEVER do these.**
-
-### DO NOT: Use RAW API for Geometry COMP
-
-```python
-# BAD - Don't do this!
-geo = base.create(geometryCOMP, 'geo1')
-geo.viewer = True
-for child in geo.children:
-    child.destroy()
-in_sop = geo.create(inSOP, 'in1')
-out_sop = geo.create(outSOP, 'out1')
-# ... tedious manual setup
-```
-
-**Why it's bad**: Error-prone, verbose, easy to forget steps (viewer, display, render flags). Use `CreateGeometryComp` instead.
-
-### DO NOT: Create geometry inside Geometry COMP
-
-```python
-# BAD - Don't do this!
-geo, in_pop, out_pop = op.TDAPI.CreateGeometryComp(base, 'geo1', x=0, y=0)
-box = op.TDAPI.CreateOp(geo, boxPOP, 'box1', x=0, y=0)  # WRONG!
-```
-
-**Why it's bad**: Can't see what's happening without entering COMP. Network structure becomes unclear from parent level.
-
-### DO NOT: Reference parent operators from inside Geometry COMP
-
-```python
-# BAD - Don't do this!
-# Inside geo1:
-choptopop1.par.chop = '../null1'  # WRONG!
-```
-
-**Why it's bad**: Creates hidden dependencies. Harder to trace data flow.
+- For new networks, prepare source geometry at the parent level and pass it through In/Out so the input is visible without entering the Geometry COMP. Prefer the helper over manually repeating its setup.
+- This default is not permission to rebuild an existing sample. A copy request must preserve internal generators, references and behavior unless a change is required by the task.
+- Internal processing such as a Material SOP is compatible with the input/output boundary. Connect it into the internal chain rather than leaving it unused.
+- A parent reference is not automatically wrong. A material that belongs to the same co-moving component can be referenced locally. For fixed shared resources or interchangeable external components, follow [network design](network-design.md#component-boundaries-and-paths).
+- Avoid hidden external data inputs scattered inside the Geometry COMP. Prefer a visible input connection or exposed OP parameter when the input should be exchangeable.
 
 ---
 
-## Correct Pattern
+## Default New-Network Pattern
 
-**Solution**: Prepare shapes at parent level, pass via In/Out, use relative paths.
+For a new component whose nodes move together, prepare shapes at parent level and pass them via In/Out:
 
 ```python
 # GOOD: shape at parent level

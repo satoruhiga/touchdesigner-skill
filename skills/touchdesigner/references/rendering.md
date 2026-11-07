@@ -123,9 +123,11 @@ ambient.par.dimmer = 0.2
 # Method 1: Parameter
 geo.par.material = 'pbr1'
 
-# Method 2: Material SOP (inside Geometry COMP)
+# Method 2: Internal material processing, with in_sop/out_sop from CreateGeometryComp
 mat_sop = op.TDAPI.CreateOp(geo, materialSOP, 'material1', x=0, y=-100)
-mat_sop.par.mat = '../pbr1'  # Relative path to parent
+mat_sop.par.mat = '../pbr1'  # Material belongs to the same co-moving component
+mat_sop.inputConnectors[0].connect(in_sop)
+out_sop.inputConnectors[0].connect(mat_sop)
 ```
 
 ### PBR MAT
@@ -185,4 +187,4 @@ render.par.lights = 'key_light rim_light'
 render.par.camera = 'cam_closeup'
 ```
 
-See [Pattern Matching](basics.md#pattern-matching) for full syntax.
+See [Pattern Matching](operator-operations.md#pattern-matching) for full syntax.

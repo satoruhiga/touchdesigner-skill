@@ -9,44 +9,40 @@ allowed-tools: Bash(node:*)
 
 Use this skill to work directly in a running TouchDesigner project. The bundled TOX exposes a local HTTP bridge inside TouchDesigner; the bundled Node script calls that bridge without requiring MCP installation.
 
-## Mandatory First Step
+## Choose the task scope
 
-Immediately after loading this skill, read `references/basics.md` once per session before doing TouchDesigner work, including asking setup questions, running connectivity checks, or making project changes. If it has already been read in the current session, do not read it again; follow the remembered rules. Treat it as required operating procedure; do not run mutating `execute` calls until it has been read in the current session.
+- **Explanation or planning without live state:** answer from the relevant reference; do not require TD connection, a baseline audit, or a bridge upgrade.
+- **Live read-only inquiry:** connect and use the scoped inquiry commands below. Audit only when the user asks for an audit; do not modify the network or replace an old bridge just to answer an unrelated query.
+- **Network creation or editing:** read [operating basics](references/basics.md) and [network design](references/network-design.md) once per session before mutation, then follow the editing workflow. Preserve existing behavior when copying samples.
 
-## Setup
+## Live connection
 
-1. Ensure TouchDesigner 2025 or later is open.
-2. Ensure Node.js 18 or later is available for `scripts/client.mjs`.
-3. Load `assets/toe/TouchDesignerAPI.tox` into the project if `op.TDAPI` is not already present.
-4. Use `TDAPI_PORT` when the TOX Port parameter is not `44444`.
-5. Verify connectivity before changing the project:
+Use TouchDesigner 2025 or later and Node.js 18 or later. The bundled `assets/toe/TouchDesignerAPI.tox` provides the bridge. Use `TDAPI_PORT` when its Port is not `44444`.
 
 ```bash
 node scripts/client.mjs ping
 ```
 
-After ping, run `audit` on the intended target to check audit capability and establish the baseline. A successful ping alone does not mean the installed bridge supports audit. If `/audit` returns 404 Not Found (rather than Operator not found), the bridge may be older than the client. Explain that it needs the updated bundled TOX; preserve project-specific bridge settings and obtain authorization before replacing a bridge unless its upgrade is already in scope. Do not silently replace it or treat a failed audit as clean.
+If connection fails, explain how to load the TOX or align the port. Do not silently install or replace a project component. For an authorized bridge upgrade, preserve its project-specific settings.
 
-If the command cannot connect, tell the user to load the TOX or align `TDAPI_PORT` with the TOX Port parameter before continuing.
+Before an audit-dependent edit, run `audit` on the intended existing target (or the containing COMP for a new component). This establishes the baseline and checks audit capability. A successful ping alone does not mean an older bridge supports audit. A `/audit` 404 Not Found, distinct from Operator not found, requires the updated bundled TOX. Explain the required upgrade and obtain authorization unless it is already in scope; do not treat a failed audit as clean. Unaffected read-only inquiries can continue.
 
-## Editable Network Design
+## Editing workflow
 
-Before creating, editing, or restructuring networks, read once per session `references/network-design.md`. Preserve existing sample behavior when copying. Choose standard operators first, Script DAT/CHOP preprocessing when clearer, then lightweight Expression processing; long parameter expressions are a last resort. Keep user-editable controls visible and reuse suitable prepared data.
+1. Inspect the target with `params`, `inspect` or `network`. Confirm parameter names and current state before assignment; record the scoped audit baseline.
+2. Read task-specific guidance only as needed:
+   - [Operator operations](references/operator-operations.md): creating, connecting, positioning, helper signatures or wildcard syntax.
+   - [Operator families](references/operator-families.md): data-family conversions and runtime operator discovery.
+   - [Geometry COMP](references/geometry-comp.md): geometry setup and instancing.
+   - [Rendering](references/rendering.md): camera, lights, materials and rendering.
+   - [GLSL](references/glsl.md): shader work.
+   - [Operator tips](references/operator-tips.md): feedback and simulation patterns.
+   - [Saving data](references/saving-data.md): exporting operator data.
+3. Make small scoped changes through `execute`. Prefer standard operators, then Script DAT/CHOP preprocessing when clearer, then lightweight Expression processing. Long parameter expressions are a last resort. Keep editable controls visible and reuse suitable prepared data.
+4. Audit after a meaningful unit of work, before replication, and before completion. Use `--baseline FILE` to distinguish new findings. Resolve new warnings or explain why they are necessary before proceeding; do not automatically repair unrelated existing warnings. The length warning starts at 71 characters.
+5. Check errors in a separate call after changes. Verify output and a relevant editing operation, restore temporary test settings, and confirm the requested final state. A clean audit alone is not completion.
 
-Audit the target before editing, after a meaningful change, before replication, and before completion with `node scripts/client.mjs audit OP_PATH`. Use `--baseline FILE` to distinguish new findings. Review new warnings before continuing; do not automatically rewrite existing ones. The default warning boundary is 71 characters. Validate an actual editing operation as well as output correctness.
-
-## Workflow
-
-1. Read only the relevant extra reference:
-   - `references/operator-families.md` for SOP/POP/TOP/CHOP/DAT/COMP conversion.
-   - `references/geometry-comp.md` for Geometry COMP and instancing.
-   - `references/rendering.md` for Camera, Light, Render TOP, and output.
-   - `references/glsl.md` for GLSL TOP, MAT, POP, and shader work.
-   - `references/operator-tips.md` for feedback loops and simulations.
-2. Inspect the current TD state with `pane`, `selection`, `operators`, `params`, `inspect`, or `network`.
-3. Execute small Python changes through `scripts/client.mjs execute`.
-4. Verify parameter names with `scripts/client.mjs params` before setting parameters.
-5. Check errors in a separate call after complex changes because TD error state updates on frame boundaries.
+Use the TDAPI helpers when available. `CreateOp` enables the viewer and handles docked DAT placement; `MoveOp` moves docked operators with their owner. For new Geometry COMPs, the preferred pattern prepares shapes at the parent level; existing samples are preserved unless restructuring is requested. Component boundaries and path-selection rules are defined in [network design](references/network-design.md).
 
 ## Local Client
 
@@ -95,47 +91,10 @@ print(me.path)
 
 `execute` writes input diagnostics to stderr by default (`bytes`, `chars`, `lines`, `sha256`, and `from`). Stdout remains the TouchDesigner JSON response. Use `--quiet` only when stderr must be silent.
 
-## Required TD Patterns
-
-Always use `op.TDAPI` helpers instead of raw TD API when available:
-
-```python
-new_op = op.TDAPI.CreateOp(base, gridSOP, 'grid1', x=0, y=0)
-chain = op.TDAPI.ChainOperators([grid, noise, null])
-params = op.TDAPI.GetParameterList('sphereSOP')
-errors = op.TDAPI.CheckErrors(op('/project1/base1'), recurse=True)
-```
-
-Apply these rules:
-
-- Set `viewer = True` for created operators; `CreateOp` already does this.
-- Use Null operators as stable reference endpoints.
-- Verify parameter names before assignment.
-- Lay out operators intentionally and avoid overlap.
-- Use relative paths inside components that move together, absolute paths for fixed shared resources, and explicit input parameters for interchangeable external components. Avoid deep parent traversal and Python construction of fixed paths.
-- Create source geometry at the parent level before feeding Geometry COMP.
-
-## Personal Knowledge Base
-
-Use a user-owned local Personal Knowledge Base only when it already exists or the user explicitly asks to initialize or record knowledge.
-
-- Default location: `~/.touchdesigner-skill/knowledge/`
-- Override location: `TD_SKILL_KB_DIR`
-- Inspect the resolved path with `node scripts/client.mjs kb path`.
-- Initialize it only on explicit request with `node scripts/client.mjs kb init`.
-- Read from it only when it exists and is relevant to the task; do not treat it as mandatory startup context.
-- Do not create it unless the user explicitly asks.
-- Do not accumulate raw execution logs or script error records by default.
-- Store only knowledge that can be reused across TouchDesigner projects. Do not store project-specific facts, project paths, client names, secrets, or one-off network details.
-- If project-specific work reveals a reusable pattern, abstract it into a general lesson before saving.
-- When a task reveals a reusable lesson worth keeping, suggest recording a Knowledge Note and ask before writing unless the user explicitly asked to record it.
-- When writing, use curated Markdown knowledge notes for reusable lessons, such as common TD pitfalls or issues that required reference, introspection, docstring, or web research to solve.
-- Update existing relevant knowledge pages before creating new pages; avoid numbered sections.
-- Never write learned knowledge back into `SKILL.md` or bundled `references/`.
-
 ## Bridge Assets
 
 - `assets/toe/TouchDesignerAPI.tox`: drop-in TouchDesigner component.
 - `assets/toe/develop.toe`: development TouchDesigner project for the bridge.
 - `assets/toe/src/TouchDesignerAPI.py`: source for the TD HTTP extension.
 - `assets/toe/src/td_utils.py`: helper functions bound to `op.TDAPI`.
+- For audit rule or bridge implementation changes, read [audit development](references/audit-development.md).

@@ -6,14 +6,13 @@
 2. [SOP vs POP](#sop-vs-pop)
 3. [Cross-Family Patterns](#cross-family-patterns)
 4. [Data Conversion Examples](#data-conversion-examples)
-5. [Available Operators](#available-operators)
-6. [Getting Operator Details](#getting-operator-details)
+5. [Getting Operator Details](#getting-operator-details)
 
 ---
 
 ## Family Overview
 
-TouchDesigner has 6 operator families. Each processes different data types but shares common design patterns.
+The families below cover common dataflow and component tasks. Materials use the MAT family; use the running build's help for available operator types.
 
 | Family | Purpose | Data Type | Example Use |
 |--------|---------|-----------|-------------|
@@ -47,7 +46,7 @@ Operator families share common patterns. When working with an unfamiliar family,
 
 ### Universal Operators
 
-Every family has these operators:
+Common patterns across dataflow families (verify availability in the running build):
 
 | Pattern | SOP | POP | TOP | CHOP | DAT |
 |---------|-----|-----|-----|------|-----|
@@ -79,12 +78,10 @@ poptoDAT   - POP → table
 
 When encountering an unfamiliar operator family:
 
-1. **Assume In/Out/Null exist** - they always do
-2. **Try the same pattern** from a known family
-3. **Check parameters** with `op.pars()` if names differ
-4. **Use official TouchDesigner documentation** for specific operator details
-
-**Example**: If you know SOP instancing works with `soptoCHOP`, assume POP instancing works similarly (prepare CHOP data, enable instancing on Geometry COMP).
+1. Query the candidate operator with `params OP_TYPE` or `info OP_TYPE` before creating it.
+2. Check the current TD build's operator and parameter information rather than assuming a renamed operator is available.
+3. Reuse a known pattern only after confirming its input and output meanings match.
+4. Use official documentation when local help does not resolve the uncertainty.
 
 ---
 
@@ -185,31 +182,6 @@ convert = op.TDAPI.CreateOp(base, convertSOP, 'convert1', x=0, y=0)
 convert.par.totype = 'particlesperpoint'
 convert.inputConnectors[0].connect(point_sop)
 ```
-
----
-
-## Available Operators
-
-### SOPs (113)
-addSOP, alembicSOP, alignSOP, armSOP, attributeSOP, attributecreateSOP, basisSOP, blendSOP, bonegroupSOP, booleanSOP, boxSOP, bridgeSOP, cacheSOP, capSOP, captureSOP, captureregionSOP, carveSOP, choptoSOP, circleSOP, claySOP, clipSOP, convertSOP, copySOP, cplusplusSOP, creepSOP, curveclaySOP, curvesectSOP, dattoSOP, deformSOP, deleteSOP, divideSOP, extrudeSOP, facetSOP, facetrackSOP, fileinSOP, filletSOP, fitSOP, fontSOP, forceSOP, fractalSOP, gridSOP, groupSOP, holeSOP, importselectSOP, inSOP, inversecurveSOP, isosurfaceSOP, joinSOP, jointSOP, kinectSOP, latticeSOP, limitSOP, lineSOP, linethickSOP, lodSOP, lsystemSOP, magnetSOP, materialSOP, mergeSOP, metaballSOP, modelSOP, noiseSOP, nullSOP, objectmergeSOP, oculusriftSOP, openvrSOP, particleSOP, pointSOP, polyloftSOP, polypatchSOP, polyreduceSOP, polysplineSOP, polystitchSOP, poptoSOP, primitiveSOP, profileSOP, projectSOP, railsSOP, rasterSOP, raySOP, rectangleSOP, refineSOP, resampleSOP, revolveSOP, scriptSOP, selectSOP, sequenceblendSOP, skinSOP, sortSOP, sphereSOP, springSOP, sprinkleSOP, spriteSOP, stitchSOP, subdivideSOP, superquadSOP, surfsectSOP, sweepSOP, switchSOP, textSOP, textureSOP, torusSOP, traceSOP, trailSOP, transformSOP, trimSOP, tristripSOP, tubeSOP, twistSOP, vertexSOP, wireframeSOP, zedSOP
-
-### POPs (99)
-accumulatePOP, alembicPOP, analyzePOP, attributePOP, attributecombinePOP, attributeconvertPOP, blendPOP, boxPOP, cachePOP, cacheblendPOP, cacheselectPOP, choptoPOP, circlePOP, connectivityPOP, convertPOP, copyPOP, cplusplusPOP, curvePOP, dattoPOP, deletePOP, dimensionPOP, dmxfixturePOP, dmxoutPOP, extrudePOP, facetPOP, feedbackPOP, fieldPOP, fileinPOP, fileoutPOP, forceradialPOP, glslPOP, glsladvancedPOP, glslcopyPOP, glslcreatePOP, glslselectPOP, gridPOP, groupPOP, histogramPOP, importselectPOP, inPOP, limitPOP, linePOP, linebreakPOP, linedividePOP, linemetricsPOP, lineresamplePOP, linesmoothPOP, linethickPOP, lookupattributePOP, lookupchannelPOP, lookuptexturePOP, mathPOP, mathcombinePOP, mathmixPOP, mergePOP, neighborPOP, noisePOP, normalPOP, normalizePOP, nullPOP, oakselectPOP, outPOP, particlePOP, patternPOP, phaserPOP, planePOP, pointPOP, pointfileinPOP, pointgeneratorPOP, polygonizePOP, primitivePOP, projectionPOP, proximityPOP, quantizePOP, randomPOP, rayPOP, rectanglePOP, rerangePOP, revolvePOP, selectPOP, skinPOP, skindeformPOP, soptoPOP, sortPOP, spherePOP, sprinklePOP, subdividePOP, switchPOP, texturemapPOP, topologyPOP, toptoPOP, torusPOP, trailPOP, transformPOP, trigPOP, tubePOP, twistPOP, zedPOP
-
-### TOPs (148)
-addTOP, analyzeTOP, antialiasTOP, blobtrackTOP, bloomTOP, blurTOP, cacheTOP, cacheselectTOP, channelmixTOP, choptoTOP, chromakeyTOP, circleTOP, compositeTOP, constantTOP, convolveTOP, cornerpinTOP, cplusplusTOP, cropTOP, crossTOP, cubemapTOP, depthTOP, differenceTOP, directxinTOP, directxoutTOP, displaceTOP, edgeTOP, embossTOP, feedbackTOP, fitTOP, flexTOP, flipTOP, flowTOP, functionTOP, glslTOP, glslmultiTOP, hsvadjustTOP, hsvtorgbTOP, importselectTOP, inTOP, insideTOP, kinectTOP, kinectazureTOP, kinectazureselectTOP, layerTOP, layermixTOP, layoutTOP, leapmotionTOP, lensdistortTOP, levelTOP, limitTOP, lookupTOP, lumablurTOP, lumalevelTOP, mathTOP, matteTOP, mirrorTOP, monochromeTOP, moviefileinTOP, moviefileoutTOP, multiplyTOP, ndiinTOP, ndioutTOP, noiseTOP, normalmapTOP, nullTOP, opencolorioTOP, opticalflowTOP, opviewerTOP, outTOP, outsideTOP, overTOP, packTOP, photoshopinTOP, pointfileinTOP, pointfileselectTOP, pointtransformTOP, poptoTOP, prefiltermapTOP, projectionTOP, rampTOP, realsenseTOP, rectangleTOP, remapTOP, renderTOP, renderpassTOP, renderselectTOP, reorderTOP, resolutionTOP, rgbkeyTOP, rgbtohsvTOP, screenTOP, screengrabTOP, scriptTOP, selectTOP, sharedmeminTOP, sharedmemoutTOP, slopeTOP, spectrumTOP, ssaoTOP, substanceTOP, substanceselectTOP, subtractTOP, svgTOP, switchTOP, syphonspoutinTOP, syphonspoutoutTOP, textTOP, texture3dTOP, thresholdTOP, tileTOP, timemachineTOP, tonemapTOP, touchinTOP, touchoutTOP, transformTOP, underTOP, videodeviceinTOP, videodeviceoutTOP, videostreaminTOP, videostreamoutTOP, webrenderTOP, zedTOP, zedselectTOP
-
-### CHOPs (171)
-abletonlinkCHOP, analyzeCHOP, angleCHOP, attributeCHOP, audiobandeqCHOP, audiobinauralCHOP, audiodeviceinCHOP, audiodeviceoutCHOP, audiodynamicsCHOP, audiofileinCHOP, audiofileoutCHOP, audiofilterCHOP, audiomovieCHOP, audiondiCHOP, audiooscillatorCHOP, audioparaeqCHOP, audioplayCHOP, audiorenderCHOP, audiospectrumCHOP, audiostreaminCHOP, audiostreamoutCHOP, audiovstCHOP, beatCHOP, bindCHOP, blacktraxCHOP, blendCHOP, blobtrackCHOP, bodytrackCHOP, bulletsolverCHOP, clipCHOP, clipblenderCHOP, clockCHOP, compositeCHOP, constantCHOP, copyCHOP, countCHOP, cplusplusCHOP, crossCHOP, cycleCHOP, dattoCHOP, delayCHOP, deleteCHOP, dmxinCHOP, dmxoutCHOP, envelopeCHOP, etherdreamCHOP, eventCHOP, expressionCHOP, extendCHOP, facetrackCHOP, fanCHOP, feedbackCHOP, fileinCHOP, fileoutCHOP, filterCHOP, freedCHOP, functionCHOP, gestureCHOP, handleCHOP, heliosdacCHOP, hogCHOP, hokuyoCHOP, holdCHOP, importselectCHOP, inCHOP, infoCHOP, interpolateCHOP, inversecurveCHOP, inversekinCHOP, joinCHOP, joystickCHOP, keyboardinCHOP, keyframeCHOP, kinectCHOP, kinectazureCHOP, lagCHOP, laserCHOP, laserdeviceCHOP, leapmotionCHOP, lfoCHOP, limitCHOP, logicCHOP, lookupCHOP, ltcinCHOP, ltcoutCHOP, mathCHOP, mergeCHOP, midiinCHOP, midiinmapCHOP, midioutCHOP, mouseinCHOP, mouseoutCHOP, noiseCHOP, nullCHOP, objectCHOP, oculusriftCHOP, openvrCHOP, oscinCHOP, oscoutCHOP, outCHOP, overrideCHOP, panelCHOP, pangolinCHOP, parameterCHOP, patternCHOP, performCHOP, phaserCHOP, pipeinCHOP, pipeoutCHOP, poptoCHOP, pulseCHOP, realsenseCHOP, recordCHOP, renameCHOP, renderpickCHOP, reorderCHOP, replaceCHOP, resampleCHOP, scanCHOP, scriptCHOP, scurveCHOP, selectCHOP, sequencerCHOP, serialCHOP, sharedmeminCHOP, sharedmemoutCHOP, shiftCHOP, shuffleCHOP, slopeCHOP, soptoCHOP, sortCHOP, speedCHOP, spliceCHOP, springCHOP, stretchCHOP, switchCHOP, syncinCHOP, syncoutCHOP, tabletCHOP, timecodeCHOP, timelineCHOP, timerCHOP, timesliceCHOP, toptoCHOP, touchinCHOP, touchoutCHOP, trailCHOP, transformCHOP, triggerCHOP, trimCHOP, warpCHOP, waveCHOP, zedCHOP
-
-### DATs (75)
-artnetDAT, chopexecuteDAT, choptoDAT, clipDAT, convertDAT, cplusplusDAT, datexecuteDAT, errorDAT, etherdreamDAT, evaluateDAT, examineDAT, executeDAT, fifoDAT, fileinDAT, fileoutDAT, folderDAT, inDAT, indicesDAT, infoDAT, insertDAT, jsonDAT, keyboardinDAT, lookupDAT, mergeDAT, midieventDAT, midiinDAT, monitorsDAT, mqttclientDAT, multitouchinDAT, ndiDAT, nullDAT, opexecuteDAT, opfindDAT, oscinDAT, oscoutDAT, outDAT, panelexecuteDAT, parameterDAT, parameterexecuteDAT, performDAT, poptoDAT, renderpickDAT, reorderDAT, scriptDAT, selectDAT, serialDAT, socketioDAT, soptoDAT, sortDAT, substituteDAT, switchDAT, tableDAT, tcpipDAT, textDAT, touchinDAT, touchoutDAT, transposeDAT, tuioinDAT, udpinDAT, udpoutDAT, videodevicesDAT, webDAT, webclientDAT, webrtcDAT, webserverDAT, websocketDAT, xmlDAT
-
-### COMPs (42)
-actorCOMP, ambientlightCOMP, animationCOMP, annotateCOMP, baseCOMP, blendCOMP, boneCOMP, bulletsolverCOMP, buttonCOMP, cameraCOMP, camerablendCOMP, constraintCOMP, containerCOMP, engineCOMP, environmentlightCOMP, fbxCOMP, fieldCOMP, forceCOMP, geometryCOMP, geotextCOMP, glslCOMP, handleCOMP, lightCOMP, listCOMP, nullCOMP, nvidiaflexsolverCOMP, opviewerCOMP, parameterCOMP, replicatorCOMP, selectCOMP, sharedmeminCOMP, sharedmemoutCOMP, sliderCOMP, tableCOMP, textCOMP, timeCOMP, usdCOMP, widgetCOMP, windowCOMP
-
-### MATs (14)
-constantMAT, depthMAT, glslMAT, inMAT, lineMAT, nullMAT, outMAT, pbrMAT, phongMAT, pointspriteMAT, selectMAT, switchMAT, wireframeMAT
 
 ---
 

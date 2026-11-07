@@ -18,7 +18,7 @@ Use local relative references for operators that belong together and move togeth
 
 Use constant paths or supported wildcard parameters when sufficient. Do not build lists of fixed OP paths in Python. Deep parent traversal hides assumptions about placement; shortening `parent().parent()` to `parent(2)` does not remove that dependency.
 
-Before completion, try a relevant edit: change the selected object, exchange an input, or branch the prepared data into another reaction. Avoid speculative configurability that the task does not need.
+Before completion, try a relevant edit: change the selected object, exchange an input, or branch the prepared data into another reaction. Restore any temporary test input or setting and verify the requested final state. Avoid speculative configurability that the task does not need.
 
 ## Read-only audit
 
@@ -45,8 +45,6 @@ All nonempty parameter expressions in Expression mode are inspected, including d
 
 The response contains `path`, `maxExpressionLength`, counts, `complete`, `errors`, and `findings`. Each finding includes stable `id`, `rule`, `severity`, location, snippet, `expectedProblem`, and `suggestion`. Parsing or collection failures make `complete` false; the CLI exits with code 2. Findings alone do not produce a failure exit code. Audit never rewrites code or parameters.
 
-## Extending the audit
+## Bridge development
 
-`assets/toe/src/td_audit.py` is pure Python. Add a check function and register it in `RULES`; each check receives a source record, parsed AST and length limit, and yields `(line, snippet, message)`. Register the expected problem and suggestion alongside it. `td_utils.AuditNetwork` collects live data; TDAPI exposes `GET /audit?path=...`, and the client calls it with `audit`.
-
-Run `python -m unittest discover -s tests -v` and `node --test tests/audit-comparison.test.mjs` from the repository root. Test positive and negative examples, especially standard references and code-like strings. When shipping rule changes, update the bundled `td_audit` DAT in the development bridge and export the TOX so the standalone asset contains the same rules.
+Only when extending audit rules or packaging the bridge, read [audit development](audit-development.md).
