@@ -15,6 +15,7 @@ Usage:
   node scripts/client.mjs params TARGET [--match PATTERN] [--changed] [--full]
   node scripts/client.mjs inspect OP_PATH
   node scripts/client.mjs network [PATH] [--depth N]
+  node scripts/client.mjs audit OP_PATH [--max-expression-length N] [--baseline FILE]
   node scripts/client.mjs info OP_TYPE
   node scripts/client.mjs errors [OP_PATH]
   node scripts/client.mjs kb path
@@ -411,6 +412,30 @@ async function main() {
     const path = String(options.path ?? positional[0] ?? "/");
     const depth = parseNonNegativeInteger(options.depth ?? 1, "depth");
     printJson(await requestJson(config, `/network${buildQuery({ path, depth })}`), compact);
+    return;
+  }
+
+  if (command === "audit") {
+    const path = positional[0];
+    if (!path) throw new Error("audit requires an explicit operator path.");
+    const limit = parseNonNegativeInteger(options["max-expression-length"] ?? 70, "max-expression-length");
+    const result = await requestJson(config, `/audit${buildQuery({ path, max_expression_length: limit })}`);
+    if (options.baseline !== undefined) {
+      if (typeof options.baseline !== "string") throw new Error("baseline requires a file.");
+      const { readFile } = await import("node:fs/promises");
+      const bytes = await readFile(options.baseline);
+      const encoding = bytes[0] === 0xff && bytes[1] === 0xfe ? "utf16le" : "utf8";
+      const baseline = JSON.parse(bytes.toString(encoding).replace(/^\uFEFF/, ""));
+      if (baseline.path !== result.path || baseline.maxExpressionLength !== limit || !Array.isArray(baseline.findings)) {
+        throw new Error("Baseline must have the same target path and expression limit.");
+      }
+      const previous = new Set(baseline.findings.map(f => f.id));
+      const current = new Set(result.findings.map(f => f.id));
+      result.comparison = { baselineComplete: baseline.complete, resolved: baseline.findings.filter(f => !current.has(f.id)) };
+      result.findings = result.findings.map(f => ({ ...f, status: previous.has(f.id) ? "existing" : "new" }));
+    }
+    printJson(result, compact);
+    if (!result.complete) process.exitCode = 2;
     return;
   }
 

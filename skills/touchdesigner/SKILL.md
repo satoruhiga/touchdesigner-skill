@@ -27,6 +27,12 @@ node scripts/client.mjs ping
 
 If the command cannot connect, tell the user to load the TOX or align `TDAPI_PORT` with the TOX Port parameter before continuing.
 
+## Editable Network Design
+
+Before creating or restructuring networks, read `references/network-design.md`. Preserve existing sample behavior when copying. Choose standard operators first, Script DAT/CHOP preprocessing when clearer, then lightweight Expression processing; long parameter expressions are a last resort. Keep user-editable controls visible and reuse suitable prepared data.
+
+Audit the target before editing, after a meaningful change, before replication, and before completion with `node scripts/client.mjs audit OP_PATH`. Use `--baseline FILE` to distinguish new findings. Review new warnings before continuing; do not automatically rewrite existing ones. The default warning boundary is 71 characters. Validate an actual editing operation as well as output correctness.
+
 ## Workflow
 
 1. Read only the relevant extra reference:
@@ -52,6 +58,7 @@ node scripts/client.mjs params sphereSOP --match "rad*"
 node scripts/client.mjs params /project1/base1/sphere1 --changed
 node scripts/client.mjs inspect /project1/base1/sphere1
 node scripts/client.mjs network /project1 --depth 1
+node scripts/client.mjs audit /project1/example
 ```
 
 Use Runtime Inquiry commands before writing ad hoc Python:
@@ -103,7 +110,7 @@ Apply these rules:
 - Use Null operators as stable reference endpoints.
 - Verify parameter names before assignment.
 - Lay out operators intentionally and avoid overlap.
-- Use relative paths for nearby operator references. Runtime Inquiry may return absolute paths as stable identifiers; when authoring TouchDesigner scripts, prefer relative paths from an explicit local anchor such as `root`, `parent()`, or `me.parent()`.
+- Use relative paths inside components that move together, absolute paths for fixed shared resources, and explicit input parameters for interchangeable external components. Avoid deep parent traversal and Python construction of fixed paths.
 - Create source geometry at the parent level before feeding Geometry COMP.
 
 ## Personal Knowledge Base

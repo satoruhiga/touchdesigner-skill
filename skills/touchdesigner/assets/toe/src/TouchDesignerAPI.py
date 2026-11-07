@@ -77,6 +77,28 @@ class TouchDesignerAPI:
                 return self._send_error(response, 400, "depth must be an integer")
             return self._handle_network(path, depth, response)
 
+        # GET /audit - Read-only recursive design audit
+        if uri.split('?')[0] == "/audit" and method == "GET":
+            path = unquote(pars.get("path", ""))
+            if not path:
+                return self._send_error(response, 400, "path is required")
+            try:
+                limit = int(pars.get("max_expression_length", "70"))
+                if limit < 0:
+                    raise ValueError()
+            except (ValueError, TypeError):
+                return self._send_error(response, 400, "max_expression_length must be a non-negative integer")
+            try:
+                result = self.AuditNetwork(path, max_expression_length=limit)
+            except ValueError as exc:
+                return self._send_error(response, 404, str(exc))
+            except Exception as exc:
+                return self._send_error(response, 500, str(exc))
+            response["statusCode"] = 200
+            response["statusReason"] = "OK"
+            response["data"] = json.dumps(result, ensure_ascii=False)
+            return self._send_response(response)
+
         # 404 for other endpoints
         response["statusCode"] = 404
         response["statusReason"] = "Not Found"

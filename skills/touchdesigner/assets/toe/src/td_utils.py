@@ -41,7 +41,7 @@ __all__ = [
     'AABB',
     'MoveOp', 'CreateOp', 'CreateGeometryComp', 'ChainOperators',
     'GetOperatorInfo', 'GetParameterList', 'GetParameterHelp',
-    'GetParameters', 'InspectOperator', 'GetNetworkGraph',
+    'GetParameters', 'InspectOperator', 'GetNetworkGraph', 'AuditNetwork',
     'PrintLayout', 'CheckErrors',
     # Layout utilities
     'GetBounds', 'CheckOverlap', 'GetAllBounds',
@@ -986,3 +986,49 @@ def FindTypeConversionPosition(
 
     # Fallback
     return pos_above
+
+
+def AuditNetwork(self, target: OP | str, max_expression_length: int = 70) -> dict:
+    """Inspect expressions and Python DATs recursively without modifying operators."""
+    import td_audit
+    if type(max_expression_length) is not int or max_expression_length < 0:
+        raise ValueError('max_expression_length must be a non-negative integer')
+    root = op(target) if isinstance(target, str) else target
+    if root is None:
+        raise ValueError(f'Operator not found: {target}')
+    records, errors = [], []
+    stack = [(root, None)]
+    count = 0
+    while stack:
+        node, clone_source = stack.pop()
+        count += 1
+        try:
+            if node.family == 'COMP':
+                own_source = node.par.clone.eval()
+                if own_source:
+                    clone_source = own_source
+                for child in reversed(node.children):
+                    stack.append((child, clone_source.op(child.name) if clone_source else None))
+            for par in node.pars():
+                if _mode_name(par) != 'EXPRESSION' or not par.expr:
+                    continue
+                source_par = getattr(clone_source.par, par.name, None) if clone_source else None
+                records.append(dict(path=node.path, parameter=par.name, kind='expression',
+                                    code=par.expr, enabled=bool(par.enable), isDefault=bool(par.isDefault),
+                                    cloneSource=clone_source.path if clone_source else None,
+                                    matchesCloneSource=(source_par.expr == par.expr and
+                                        _mode_name(source_par) == 'EXPRESSION') if source_par is not None else None))
+            if node.family == 'DAT' and node.isText:
+                language = getattr(node.par, 'language', None)
+                if language is not None and language.eval() == 'python':
+                    records.append(dict(path=node.path, kind='dat', code=node.text,
+                                        cloneSource=clone_source.path if clone_source else None,
+                                        matchesCloneSource=node.text == clone_source.text if clone_source else None))
+        except Exception as exc:
+            errors.append(dict(path=node.path, message=str(exc)))
+    result = td_audit.audit_records(records, max_expression_length)
+    result['errors'] = errors + result['errors']
+    result.update(path=root.path, maxExpressionLength=max_expression_length,
+                  operators=count, expressions=sum(r['kind'] == 'expression' for r in records),
+                  pythonDATs=sum(r['kind'] == 'dat' for r in records), complete=not result['errors'])
+    return result

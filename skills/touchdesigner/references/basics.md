@@ -239,9 +239,9 @@ render.par.geometry = '* ^debug_*'     # All except debug objects
 
 ## Network Design Patterns
 
-### Always Use Null as Intermediary
+### Use Null at Stable Boundaries
 
-Before any reference, insert a Null:
+Use Nulls for stable reference endpoints or public outputs. Do not insert one mechanically before every reference:
 
 ```
 grid1 → null1 → sopto1
@@ -250,7 +250,7 @@ render1 → null_out
 
 ### Use Relative Paths for References
 
-**DO NOT use absolute paths for nearby operators.**
+Use relative paths for internal operators that move together. Fixed shared resources can use absolute paths; interchangeable external components should be exposed through an input parameter. See [network design](network-design.md).
 
 ```python
 # BAD - Breaks when moving/copying network

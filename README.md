@@ -34,3 +34,7 @@ Set `TDAPI_PORT` if the TOX Port parameter is not `44444`.
 - `skills/touchdesigner/SKILL.md`: portable skill entry point.
 - `skills/touchdesigner/references/`: task-specific TouchDesigner guidance.
 - `skills/touchdesigner/assets/toe/`: TouchDesigner bridge project, component, and source files.
+
+## Network design audit
+
+Run `node skills/touchdesigner/scripts/client.mjs audit /project1/example` for a read-only recursive audit of parameter expressions and Python DATs. Use `--baseline FILE` to compare with a previous JSON result. See [editable network design and audit rules](skills/touchdesigner/references/network-design.md). Updated audit support requires the bundled bridge TOX as well as the client.
