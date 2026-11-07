@@ -51,17 +51,23 @@ def audit_records(records, max_expression_length=70):
     if type(max_expression_length) is not int or max_expression_length < 0:
         raise ValueError('max_expression_length must be a non-negative integer')
     findings, errors = [], []
+    occurrences = {}
     for record in records:
         try:
-            tree = ast.parse(record['code'], mode='eval' if record['kind'] == 'expression' else 'exec')
+            parsed_code = record['code'].lstrip(' \t') if record['kind'] == 'expression' else record['code']
+            tree = ast.parse(parsed_code, mode='eval' if record['kind'] == 'expression' else 'exec')
         except (SyntaxError, ValueError) as exc:
             tree = None
             errors.append(dict(path=record['path'], parameter=record.get('parameter'),
                                message=f'Python parsing failed; hierarchy rules not checked: {exc}'))
         for rule_id, check, problem, suggestion in RULES:
-            for line, snippet, message in check(record, tree, max_expression_length):
+            source = record if check is expression_length else dict(record, code=parsed_code)
+            for line, snippet, message in check(source, tree, max_expression_length):
                 identity = '\0'.join([rule_id, record['path'], record.get('parameter') or '',
-                                      str(line), snippet or ''])
+                                      snippet or ''])
+                occurrence = occurrences.get(identity, 0)
+                occurrences[identity] = occurrence + 1
+                identity += '\0' + str(occurrence)
                 findings.append(dict(
                     id=hashlib.sha256(identity.encode()).hexdigest()[:20],
                     rule=rule_id, severity='warning', path=record['path'],
@@ -71,3 +77,23 @@ def audit_records(records, max_expression_length=70):
                     matchesCloneSource=record.get('matchesCloneSource'),
                     cloneSource=record.get('cloneSource')))
     return dict(findings=findings, errors=errors)
+
+
+def literal_op_reference(code):
+    """Recognize only op('path') or op.Shortcut.op('path'), never evaluate code."""
+    try:
+        call = ast.parse(code.lstrip(' \t'), mode='eval').body
+    except (SyntaxError, ValueError):
+        return None
+    if not isinstance(call, ast.Call) or len(call.args) != 1 or call.keywords:
+        return None
+    arg = call.args[0]
+    if not isinstance(arg, ast.Constant) or not isinstance(arg.value, str):
+        return None
+    if isinstance(call.func, ast.Name) and call.func.id == 'op':
+        return None, arg.value
+    if isinstance(call.func, ast.Attribute) and call.func.attr == 'op':
+        base = call.func.value
+        if isinstance(base, ast.Attribute) and isinstance(base.value, ast.Name) and base.value.id == 'op':
+            return base.attr, arg.value
+    return None

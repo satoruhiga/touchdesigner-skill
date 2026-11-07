@@ -1004,7 +1004,18 @@ def AuditNetwork(self, target: OP | str, max_expression_length: int = 70) -> dic
         count += 1
         try:
             if node.family == 'COMP':
-                own_source = node.par.clone.eval()
+                clone_par = node.par.clone
+                own_source = None
+                if _mode_name(clone_par) != 'CONSTANT':
+                    clone_source = None
+                if _mode_name(clone_par) == 'CONSTANT':
+                    own_source = clone_par.eval()
+                elif _mode_name(clone_par) == 'EXPRESSION':
+                    reference = td_audit.literal_op_reference(clone_par.expr)
+                    if reference is not None:
+                        shortcut, path = reference
+                        anchor = getattr(op, shortcut, None) if shortcut else node.parent()
+                        own_source = anchor.op(path) if anchor else None
                 if own_source:
                     clone_source = own_source
                 for child in reversed(node.children):
@@ -1020,7 +1031,9 @@ def AuditNetwork(self, target: OP | str, max_expression_length: int = 70) -> dic
                                         _mode_name(source_par) == 'EXPRESSION') if source_par is not None else None))
             if node.family == 'DAT' and node.isText:
                 language = getattr(node.par, 'language', None)
-                if language is not None and language.eval() == 'python':
+                if language is not None and _mode_name(language) != 'CONSTANT':
+                    errors.append(dict(path=node.path, message='Dynamic DAT language not evaluated; DAT code not scanned'))
+                elif language is not None and language.eval() == 'python':
                     records.append(dict(path=node.path, kind='dat', code=node.text,
                                         cloneSource=clone_source.path if clone_source else None,
                                         matchesCloneSource=node.text == clone_source.text if clone_source else None))

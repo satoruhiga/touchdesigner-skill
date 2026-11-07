@@ -25,11 +25,13 @@ Immediately after loading this skill, read `references/basics.md` once per sessi
 node scripts/client.mjs ping
 ```
 
+After ping, run `audit` on the intended target to check audit capability and establish the baseline. A successful ping alone does not mean the installed bridge supports audit. If `/audit` returns 404 Not Found (rather than Operator not found), the bridge may be older than the client. Explain that it needs the updated bundled TOX; preserve project-specific bridge settings and obtain authorization before replacing a bridge unless its upgrade is already in scope. Do not silently replace it or treat a failed audit as clean.
+
 If the command cannot connect, tell the user to load the TOX or align `TDAPI_PORT` with the TOX Port parameter before continuing.
 
 ## Editable Network Design
 
-Before creating or restructuring networks, read `references/network-design.md`. Preserve existing sample behavior when copying. Choose standard operators first, Script DAT/CHOP preprocessing when clearer, then lightweight Expression processing; long parameter expressions are a last resort. Keep user-editable controls visible and reuse suitable prepared data.
+Before creating, editing, or restructuring networks, read once per session `references/network-design.md`. Preserve existing sample behavior when copying. Choose standard operators first, Script DAT/CHOP preprocessing when clearer, then lightweight Expression processing; long parameter expressions are a last resort. Keep user-editable controls visible and reuse suitable prepared data.
 
 Audit the target before editing, after a meaningful change, before replication, and before completion with `node scripts/client.mjs audit OP_PATH`. Use `--baseline FILE` to distinguish new findings. Review new warnings before continuing; do not automatically rewrite existing ones. The default warning boundary is 71 characters. Validate an actual editing operation as well as output correctness.
 
@@ -69,7 +71,7 @@ Use Runtime Inquiry commands before writing ad hoc Python:
 - `params OP_PATH --changed`: show only changed, expression, export, or bind parameters.
 - `params TARGET --full`: include extra metadata such as menu names and ranges.
 - `inspect OP_PATH`: show compact live state for one operator, including changed parameters, connections, docked operators, and errors.
-- `network OP_PATH --depth N`: show a scoped directed graph with flat `nodes` and `edges`; node `id`/`path` and edge endpoints are absolute paths, while node `pathFromRoot` is the relative path to prefer when authoring local TD scripts from that root.
+- `network OP_PATH --depth N`: show a scoped directed graph with flat `nodes` and `edges`; node `id`/`path` and edge endpoints are absolute paths, while node `pathFromRoot` is a relative path hint for internal operators that move together. Choose shared-resource and external-input references by their role, not proximity.
 
 Pipe Python through stdin to avoid shell quoting problems:
 

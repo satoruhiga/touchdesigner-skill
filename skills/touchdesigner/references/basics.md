@@ -248,24 +248,25 @@ grid1 → null1 → sopto1
 render1 → null_out
 ```
 
-### Use Relative Paths for References
+### Choose References by Component Role
 
 Use relative paths for internal operators that move together. Fixed shared resources can use absolute paths; interchangeable external components should be exposed through an input parameter. See [network design](network-design.md).
 
 ```python
-# BAD - Breaks when moving/copying network
+# Internal nodes intended to move together: absolute paths break copies
 geo.par.instanceop = '/project1/base1/null_chop'  # WRONG!
 sop2chop.par.sop = '/project1/base1/grid1'        # WRONG!
 
-# GOOD - Use relative paths
+# Use relative paths for these internal nodes
 geo.par.instanceop = 'null_chop'   # Same level
 sop2chop.par.sop = 'null1'         # Same level
 render.par.camera = '../cam1'      # Parent level
 ```
 
-**When to use relative vs absolute:**
-- Same level or nearby hierarchy → **Relative** (e.g., `null1`, `../cam1`)
-- Global/shared resources → **Absolute** (e.g., `/project1/shared/texture1`)
+**Choose by dependency role:**
+- Internal operators that move together: relative paths such as `null1` or `../cam1`.
+- Fixed project-wide shared resources: absolute paths such as `/project1/shared/texture1`.
+- Interchangeable external components: an OP parameter followed by a documented public output.
 
 ### Layout Rules
 
