@@ -20,6 +20,14 @@ Use constant paths or supported wildcard parameters when sufficient. Do not buil
 
 Before completion, try a relevant edit: change the selected object, exchange an input, or branch the prepared data into another reaction. Restore any temporary test input or setting and verify the requested final state. Avoid speculative configurability that the task does not need.
 
+### Defaults for reusable components
+
+When creating or preparing a component for reuse, distinguish its public parameter defaults from the current values of an existing example. Do not promote example-specific tuning into defaults merely because it is currently in use. Check the corresponding standard operator defaults as a starting point, not as an unconditional requirement; an explicit component contract or authorized exception may differ.
+
+Before adopting defaults for input-dependent processing, check the resulting channel/sample counts, output dimensions and amount of data read for the intended input range. A standard default or a slider's displayed range does not establish a safe processing bound; consider direct numeric entry as well. Identify unsafe expansion before trying it live, and agree a scoped limit or alternative rather than silently clamping an existing sample.
+
+Changing reusable defaults does not authorize resetting existing example values or changing the source sample's behavior. Verify the reusable copy at its defaults and with a relevant input/control change, while separately confirming that the existing example retains its requested state. Report untested ranges rather than claiming general safety.
+
 ## Read-only audit
 
 ```powershell
